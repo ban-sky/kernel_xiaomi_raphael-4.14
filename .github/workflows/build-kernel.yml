@@ -34,6 +34,7 @@ jobs:
           make -j"$(nproc)" O=out ARCH=arm64 \
             CROSS_COMPILE=aarch64-linux-gnu- \
             CROSS_COMPILE_COMPAT=arm-linux-gnueabi- \
+            NO_YAML=1 \
             DTC_EXT=dtc \
             raphael_defconfig 2>&1 | tee out.configure.log \
             || { echo "CONFIGURE FAILED"; exit 1; }
@@ -44,6 +45,7 @@ jobs:
           make -j"$(nproc)" O=out ARCH=arm64 \
             CROSS_COMPILE=aarch64-linux-gnu- \
             CROSS_COMPILE_COMPAT=arm-linux-gnueabi- \
+            NO_YAML=1 \
             DTC_EXT=dtc \
             Image dtbs 2>&1 | tee out.build.log \
             || { echo "BUILD FAILED"; exit 1; }
