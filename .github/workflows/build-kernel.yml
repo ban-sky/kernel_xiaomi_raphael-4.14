@@ -10,15 +10,15 @@ permissions:
 env:
   KNAME: Zundamon
   KVERNUM: "1.0"
-  KSTAGE: "rc3"
-  KV: "v1.0-rc3"
+  KSTAGE: "rc4"
+  KV: "v1.0-rc4"
   KLINE: "4.14.357"
-  # KernelSU-Next manager shipped beside the kernel. The kernel tree tracks
-  # KSU_VERSION 32680, and every manager declares MINIMAL_SUPPORTED_KERNEL:
-  #   v3.4.x -> 33188, v3.2.0 -> 33110, v3.1.0 -> 32310, v3.0.x -> 22000
-  # 32680 < 33110, so only v3.1.0 / v3.0.x managers accept this kernel.
-  KSU_MANAGER_URL: "https://github.com/KernelSU-Next/KernelSU-Next/releases/download/v3.1.0/KernelSU_Next_v3.1.0_33024-release.apk"
-  KSU_MANAGER_FALLBACK_URL: "https://github.com/KernelSU-Next/KernelSU-Next/releases/download/v3.0.1/KernelSU_Next_v3.0.1_32967-release.apk"
+  # The tree is backslashxx/KernelSU v3.3.1 (KSU_VERSION 32680,
+  # KSU_APP_PROFILE_VER 4, package me.weishu.kernelsu). Its own build 32680 is
+  # the exact match: MINIMAL_SUPPORTED_KERNEL 32513 <= 32680, profile ABI v4.
+  # KernelSU-Next 3.1.0/3.2.0/3.4.x mismatch (profile ABI v2/v3/v4 + version gates).
+  KSU_MANAGER_URL: "https://github.com/backslashxx/KernelSU/releases/download/v3.3.1/KernelSU_v3.3.1_32680-release.apk"
+  KSU_MANAGER_ASSET: "KernelSU-v3.3.1_32680.apk"
 
 jobs:
   build:
@@ -103,12 +103,11 @@ jobs:
           cp out.build.log out.configure.log artifacts/ 2>/dev/null || true
           ls -lh artifacts
 
-      - name: Fetch KernelSU-Next managers
+      - name: Fetch KernelSU manager (backslashxx v3.3.1, build 32680)
         if: success()
         continue-on-error: true
         run: |
-          curl -fsSL -o KernelSU-Next.apk "$KSU_MANAGER_URL" \
-            || curl -fsSL -o KernelSU-Next.apk "$KSU_MANAGER_FALLBACK_URL" || true
+          curl -fsSL -o KernelSU.apk "$KSU_MANAGER_URL"
           ls -lh *.apk 2>/dev/null || true
 
       - name: Package AnyKernel3 flashable zip
@@ -153,14 +152,14 @@ jobs:
 
           cat >> ak3/anykernel.sh <<'AKEOF'
 
-          # Zundamon: leave the matching KernelSU-Next manager on the sdcard so
-          # it can be installed right after the first boot.
-          if [ -f "$AKHOME/KernelSU-Next.apk" ]; then
+          # Zundamon: leave the matching KernelSU manager (backslashxx v3.3.1,
+          # build 32680) on the sdcard so it can be installed after first boot.
+          if [ -f "$AKHOME/KernelSU.apk" ]; then
             ui_print " ";
-            ui_print "Copying KernelSU-Next manager";
+            ui_print "Copying KernelSU manager (v3.3.1_32680)";
             mkdir -p /sdcard/Download/Zundamon;
-            cp -f "$AKHOME/KernelSU-Next.apk" /sdcard/Download/Zundamon/KernelSU-Next.apk;
-            ui_print "  -> /sdcard/Download/Zundamon/KernelSU-Next.apk";
+            cp -f "$AKHOME/KernelSU.apk" /sdcard/Download/Zundamon/KernelSU.apk;
+            ui_print "  -> /sdcard/Download/Zundamon/KernelSU.apk";
             ui_print "  Install it after boot to manage root.";
           fi
 
@@ -168,8 +167,8 @@ jobs:
           AKEOF
 
           cp out/arch/arm64/boot/Image ak3/Image
-          if [ -f KernelSU-Next.apk ]; then
-            cp KernelSU-Next.apk ak3/KernelSU-Next.apk
+          if [ -f KernelSU.apk ]; then
+            cp KernelSU.apk ak3/KernelSU.apk
           fi
           # 刻意不打包 dtbo.img：boot 里的 dtb 与 ROM 的 dtbo 必须同代，覆盖 ROM 的 dtbo 反而可能开不了机。
           # 需要单独处理 dtbo 的用户从 artifact raphael-*-image 里取 dtbo.img。
@@ -186,10 +185,10 @@ jobs:
             unzip -l "$ZIP" | grep -qE ' Image$' || { echo "ERROR: Image missing in $ZIP"; exit 1; }
             unzip -l "$ZIP" | grep -q ' anykernel.sh$' || { echo "ERROR: anykernel.sh missing in $ZIP"; exit 1; }
             unzip -l "$ZIP" | grep -q ' tools/ak3-core.sh$' || { echo "ERROR: tools/ak3-core.sh missing in $ZIP"; exit 1; }
-            if unzip -l "$ZIP" | grep -q ' KernelSU-Next.apk$'; then
-              echo "OK: KernelSU-Next.apk bundled in $ZIP"
+            if unzip -l "$ZIP" | grep -q ' KernelSU.apk$'; then
+              echo "OK: KernelSU.apk bundled in $ZIP"
             else
-              echo "WARNING: KernelSU-Next.apk not bundled in $ZIP (manager download failed)"
+              echo "WARNING: KernelSU.apk not bundled in $ZIP (manager download failed)"
             fi
             if unzip -l "$ZIP" | grep -q ' dtbo.img$'; then
               echo "WARNING: unexpected dtbo.img in $ZIP"
@@ -258,10 +257,10 @@ jobs:
           merge-multiple: true
           path: dist
 
-      - name: Fetch KernelSU-Next managers
+      - name: Fetch KernelSU manager (backslashxx v3.3.1, build 32680)
         run: |
-          curl -fsSL -o "dist/KernelSU-Next-v3.1.0.apk" "$KSU_MANAGER_URL" || true
-          curl -fsSL -o "dist/KernelSU-Next-v3.0.1.apk" "$KSU_MANAGER_FALLBACK_URL" || true
+          curl -fsSL -o "dist/$KSU_MANAGER_ASSET" "$KSU_MANAGER_URL"
+          ls -lh "dist/$KSU_MANAGER_ASSET"
           ls -lh dist
 
       - name: Publish GitHub release
@@ -281,12 +280,11 @@ jobs:
 
           - Zundamon-4.14.357-${{ env.KV }}.zip: AnyKernel3 flashable zip, standard flavour (Image only, keeps your ROM dtbo).
           - Zundamon-4.14.357-${{ env.KV }}-docker.zip: same kernel with Docker/container support (UTS/IPC/PID/NET/USER namespaces, cgroup pids/device, veth/bridge/vxlan + NAT, overlayfs, seccomp filters).
-          - KernelSU-Next-v3.1.0.apk: manager matching this kernel (MINIMAL_SUPPORTED_KERNEL 32310 < 32680). Use this one.
-          - KernelSU-Next-v3.0.1.apk: older fallback (MINIMAL_SUPPORTED_KERNEL 22000).
-          - Do not use 3.2.0+ managers: they require kernel >= 33110 and will report an unsupported kernel.
-          - Both zips' anykernel.sh copies the manager to /sdcard/Download/Zundamon/; install it after boot.
+          - KernelSU-v3.3.1\_32680.apk: the matching manager (backslashxx/KernelSU build 32680, MINIMAL_SUPPORTED_KERNEL 32513, app-profile ABI v4). Install this one, then open it once and grant root.
+          - Do not use KernelSU-Next 3.x managers: 3.1.0 uses app-profile ABI v2 and 3.2.0/3.4.x require kernel 33110/33188, so superuser profile edits fail with "failed to update app profile".
+          - Both zips' anykernel.sh copies the manager to /sdcard/Download/Zundamon/KernelSU.apk; install it after boot.
 
-          Changes in this build: lowest brightness raised from 2 to 60 (~3%), so the dimmest step is no longer near-black. Version string now carries the v prefix.
+          Changes in v1.0-rc4: switched the bundled manager to backslashxx/KernelSU v3.3.1 build 32680 (exact kernel match) and updated the kernel certificate whitelist to it, so adding a superuser no longer fails with "failed to update app profile".
 
           Backup boot/dtbo before flashing." \
             dist/*.zip dist/*.sha256 dist/*.apk 2>&1 | tee release.log

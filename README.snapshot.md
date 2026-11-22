@@ -39,24 +39,24 @@ Redmi K20 Pro / Mi 9T Pro（代号 **raphael**，SM8150）的 4.14 第三方内�
 
 ## 版本与产物
 
-- 版本串：`CONFIG_LOCALVERSION="-Zundamon-v1.0-rc3"`（`1.0` 前带 `v`）且去掉了 `Makefile` 里的 `EXTRAVERSION = -openela`，`uname -r` 为 **`4.14.357-Zundamon-v1.0-rc3`**。
+- 版本串：`CONFIG_LOCALVERSION="-Zundamon-v1.0-rc4"`（`1.0` 前带 `v`）且去掉了 `Makefile` 里的 `EXTRAVERSION = -openela`，`uname -r` 为 **`4.14.357-Zundamon-v1.0-rc4`**。
 - 每次 CI 出两种口味：
-  - `Zundamon-4.14.357-v1.0-rc3.zip`——标准版；
-  - `Zundamon-4.14.357-v1.0-rc3-docker.zip`——同内核 + Docker/容器支持；
+  - `Zundamon-4.14.357-v1.0-rc4.zip`——标准版；
+  - `Zundamon-4.14.357-v1.0-rc4-docker.zip`——同内核 + Docker/容器支持；
   - 都是 AnyKernel3，只替换 boot 内 kernel，不含 dtbo.img，同目录有 `.sha256`。
 - Docker 版是在 `raphael_defconfig` 上再叠 `arch/arm64/configs/raphael_docker.config`：UTS/IPC/PID/NET/USER 命名空间、cgroup pids/device、veth/macvlan/vxlan/bridge + iptables NAT、overlayfs、seccomp filter。标准版不启用这些（尤其 `USER_NS` 会扩大攻击面），两个包互不影响。
 - 命名规则 `Zundamon-<内核版本>-<版本号>[-docker]`，由 workflow 顶部 `KNAME/KV` 控制。
 
 ## Releases 与 root 管理器
 
-- `main` 分支构建成功后，workflow 里的 `release` job 会用 Actions 自带的 `GITHUB_TOKEN` 自动创建/更新 **prerelease** `v1.0-rc3-4.14`，资产包括：
-  - `Zundamon-4.14.357-v1.0-rc3.zip` / `Zundamon-4.14.357-v1.0-rc3-docker.zip` + `.sha256`；
-  - `KernelSU-Next-v3.1.0.apk`（首选，`MINIMAL_SUPPORTED_KERNEL=32310`）；
-  - `KernelSU-Next-v3.0.1.apk`（更老的回退，`MINIMAL_SUPPORTED_KERNEL=22000`）。
-- 内核里的 KernelSU 是 **KernelSU-Next**（`drivers/staging/kernelsu/Makefile:11` `KSU_VERSION=32680`），所以管理器必须用 KSU-Next 的 APK，不能装原版 KernelSU。
-- 管理器版本要**压着内核版本选**：每个 KSU-Next 管理器在 `Natives.kt` 里写死了 `MINIMAL_SUPPORTED_KERNEL`——v3.4.x 需要 33188、v3.2.0 需要 33110、v3.1.0 需要 32310、v3.0.x 需要 22000。本内核是 32680，所以 **3.2.0 及更新的管理器都会提示“内核版本不受支持”**，只能用 3.1.0（或更老）。这就是第一个 Release 里 3.4.2 装不上的原因。
-- 另一个坑是 **v2 签名白名单**：`manager/apk_sign.c:322` 用 `KSU_EXPECTED_SIZE/HASH` 校验管理器 APK 的签名证书。上游这棵树原先带的是 tiann/KernelSU 的默认值（`me.weishu.kernelsu`、827 字节证书、`c371061b…`），而官方 KSU-Next APK 的证书是 998 字节、`79e59011…`，所以任何官方 KSU-Next 管理器都会报“无法在内核找到v2签名”。现在已把常量改成 KSU-Next 的发布签名（`0x03e6` / `79e59011…` / 包名 `com.rifsxd.ksunext`）。
-- 刷机包内也放了一份 `KernelSU-Next.apk`（即 3.1.0），`anykernel.sh` 刷完会把管理器拷到 `/sdcard/Download/Zundamon/KernelSU-Next.apk`。恢复模式里没法静默执行 `pm install`，所以**重启后需要手动点一下这个 APK 安装**。
+- `main` 分支构建成功后，workflow 的 `release` job 用 Actions 自带的 `GITHUB_TOKEN` 自动创建/更新 **prerelease** `v1.0-rc4-4.14`，资产包括：
+  - `Zundamon-4.14.357-v1.0-rc4.zip` / `Zundamon-4.14.357-v1.0-rc4-docker.zip` + `.sha256`；
+  - `KernelSU-v3.3.1_32680.apk`——唯一匹配的管理器。
+- 这棵树自带的是 **backslashxx/KernelSU v3.3.1**（KernelSU-Next 的 fork）：`drivers/staging/kernelsu/Makefile:11` `KSU_VERSION=32680`，`include/uapi/app_profile.h:4` `KSU_APP_PROFILE_VER 4`，包名 `me.weishu.kernelsu`。
+- 所以管理器必须用 backslashxx 的 **build 32680** APK：`Natives.kt:27` `MINIMAL_SUPPORTED_KERNEL=32513`，app-profile ABI 为 v4（`uapi/app_profile.h:6`），包名一致。
+- KernelSU-Next 官方 3.x 管理器全都对不上：v3.1.0 过得了版本门（32310）但 app-profile ABI 是 **v2**，添加超级用户时内核 `ksu_set_app_profile()` 直接 `-EINVAL`，界面就是「**更新应用配置失败**」；v3.2.0 是 ABI v3 且要求内核 33110；v3.4.x 是 ABI v4 但要求 33188。**不要装 KernelSU-Next 3.x。**
+- v2 签名白名单在 `manager/apk_sign.c:322`，常量在 `drivers/staging/kernelsu/Makefile:13-15`：现在为 `me.weishu.kernelsu` / `0x0363`（867 字节）/ `4359c171…`，正好是 backslashxx 32680 APK 的证书。换管理器必须同步改这三个值，否则报「无法在内核找到v2签名」（长度不等时也会报这句，且 `dmesg` 里看不到 `sha256:` 行）。
+- 刷机包内置 `KernelSU.apk`，`anykernel.sh` 刷完会拷到 `/sdcard/Download/Zundamon/KernelSU.apk`。recovery 里无法静默 `pm install`，重启后手动点安装，再打开管理器授权即可。
 
 ## CI 构建链（这段是踩坑记录）
 
