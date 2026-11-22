@@ -281,7 +281,7 @@ jobs:
           - Zundamon-4.14.357-${{ env.KV }}.zip: AnyKernel3 flashable zip, standard flavour (Image only, keeps your ROM dtbo).
           - Zundamon-4.14.357-${{ env.KV }}-docker.zip: same kernel with Docker/container support (UTS/IPC/PID/NET/USER namespaces, cgroup pids/device, veth/bridge/vxlan + NAT, overlayfs, seccomp filters).
           - KernelSU-v3.3.1\_32680.apk: the matching manager (backslashxx/KernelSU build 32680, MINIMAL_SUPPORTED_KERNEL 32513, app-profile ABI v4). Install this one, then open it once and grant root.
-          - Do not use KernelSU-Next 3.x managers: 3.1.0 uses app-profile ABI v2 and 3.2.0/3.4.x require kernel 33110/33188, so superuser profile edits fail with "failed to update app profile".
+          - Do not use KernelSU-Next 3.x managers: 3.1.0 uses app-profile ABI v2 and 3.2.0/3.4.x require kernel 33110/33188, so superuser profile edits fail with failed to update app profile.
           - Both zips' anykernel.sh copies the manager to /sdcard/Download/Zundamon/KernelSU.apk; install it after boot.
 
           Changes in v1.0-rc4: switched the bundled manager to backslashxx/KernelSU v3.3.1 build 32680 (exact kernel match) and updated the kernel certificate whitelist to it, so adding a superuser no longer fails with "failed to update app profile".
