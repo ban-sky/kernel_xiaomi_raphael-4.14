@@ -33,17 +33,24 @@ Redmi K20 Pro / Mi 9T Pro（代号 **raphael**，SM8150）的 4.14 第三方内�
 9. **DC 调光把低亮度锁死**（rc2，待真机确认）
    - `drivers/gpu/drm/msm/dsi-staging/dsi_panel.c`：DC 调光（`DISPPARAM_DC_ON` / `DISPPARAM_DC_LAYER_ON`）打开后，低于 `dc_threshold`（raphael 是 610/2047）的背光请求会被 **整条丢弃**（`skip set backlight bacase dc enable`），或**钉死在 dc_threshold**。Xiaomi 原本靠显示处理器在底层压暗画面；部分第三方 ROM（如移植的澎湃 OS 3）只打开了 DC 图层却没做画面压暗，于是亮度条在低段完全没反应、屏幕停在 ~30%。
    - 现在改成：DC 地板默认关闭，背光始终按请求值下发（DC 图层命令 `DIMMINGON/OFF` 仍照发）。需要恢复 Xiaomi 老行为时，给面板节点加 `qcom,mdss-dsi-panel-dc-floor-enable;` 即可。
+10. **最低亮度接近全黑**（rc3）
+   - `arch/arm64/boot/dts/qcom/xiaomi-sm8150-common.dtsi` 的 `qcom,mdss-dsi-bl-min-level` 从 `<2>` 提到 `<60>`（2047 的约 3%）。
+   - `drivers/gpu/drm/msm/dsi-staging/dsi_panel.c` 的 `dsi_panel_set_backlight()` 对任何非零 `bl_temp` 钳制到 `bl_min_level`；`0` 仍是 `0`，关屏/AOD 不受影响。觉得还暗就继续调这个 60。
 
 ## 版本与产物
 
-- 版本串：`CONFIG_LOCALVERSION="-Zundamon-1.0-rc2"` 且去掉了 `Makefile` 里的 `EXTRAVERSION = -openela`，`uname -r` 为 **`4.14.357-Zundamon-1.0-rc2`**。
-- 刷机包：`Zundamon-4.14.357-1.0-rc2.zip`（AnyKernel3，只替换 boot 内 kernel，不含 dtbo.img），artifact 名 `Zundamon-4.14.357-1.0-rc2`，同目录有 `.sha256`。
-- 命名规则 `Zundamon-<内核版本>-<版本号>[-rcN]`，由 workflow 顶部 `KNAME/KVERNUM/KSTAGE` 控制。
+- 版本串：`CONFIG_LOCALVERSION="-Zundamon-v1.0-rc3"`（`1.0` 前带 `v`）且去掉了 `Makefile` 里的 `EXTRAVERSION = -openela`，`uname -r` 为 **`4.14.357-Zundamon-v1.0-rc3`**。
+- 每次 CI 出两种口味：
+  - `Zundamon-4.14.357-v1.0-rc3.zip`——标准版；
+  - `Zundamon-4.14.357-v1.0-rc3-docker.zip`——同内核 + Docker/容器支持；
+  - 都是 AnyKernel3，只替换 boot 内 kernel，不含 dtbo.img，同目录有 `.sha256`。
+- Docker 版是在 `raphael_defconfig` 上再叠 `arch/arm64/configs/raphael_docker.config`：UTS/IPC/PID/NET/USER 命名空间、cgroup pids/device、veth/macvlan/vxlan/bridge + iptables NAT、overlayfs、seccomp filter。标准版不启用这些（尤其 `USER_NS` 会扩大攻击面），两个包互不影响。
+- 命名规则 `Zundamon-<内核版本>-<版本号>[-docker]`，由 workflow 顶部 `KNAME/KV` 控制。
 
 ## Releases 与 root 管理器
 
-- `main` 分支构建成功后，workflow 里的 `release` job 会用 Actions 自带的 `GITHUB_TOKEN` 自动创建/更新 **prerelease** `v1.0-rc2-4.14`，资产包括：
-  - `Zundamon-4.14.357-1.0-rc2.zip` + `.sha256`；
+- `main` 分支构建成功后，workflow 里的 `release` job 会用 Actions 自带的 `GITHUB_TOKEN` 自动创建/更新 **prerelease** `v1.0-rc3-4.14`，资产包括：
+  - `Zundamon-4.14.357-v1.0-rc3.zip` / `Zundamon-4.14.357-v1.0-rc3-docker.zip` + `.sha256`；
   - `KernelSU-Next-v3.1.0.apk`（首选，`MINIMAL_SUPPORTED_KERNEL=32310`）；
   - `KernelSU-Next-v3.0.1.apk`（更老的回退，`MINIMAL_SUPPORTED_KERNEL=22000`）。
 - 内核里的 KernelSU 是 **KernelSU-Next**（`drivers/staging/kernelsu/Makefile:11` `KSU_VERSION=32680`），所以管理器必须用 KSU-Next 的 APK，不能装原版 KernelSU。
