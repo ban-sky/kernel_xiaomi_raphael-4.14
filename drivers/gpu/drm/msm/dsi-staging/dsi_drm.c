@@ -460,6 +460,8 @@ static void dsi_bridge_enable(struct drm_bridge *bridge)
 		return;
 	}
 
+	pr_info("dsi_bridge_enable id=%d\n", c_bridge->id);
+
 	if (c_bridge->dsi_mode.dsi_mode_flags &
 			(DSI_MODE_FLAG_SEAMLESS | DSI_MODE_FLAG_VRR |
 			 DSI_MODE_FLAG_DYN_CLK)) {
@@ -493,6 +495,8 @@ static void dsi_bridge_disable(struct drm_bridge *bridge)
 		pr_err("Invalid params\n");
 		return;
 	}
+
+	pr_info("dsi_bridge_disable id=%d\n", c_bridge->id);
 
 	if (c_bridge->dsi_mode.dsi_mode_flags &
 			(DSI_MODE_FLAG_SEAMLESS | DSI_MODE_FLAG_VRR |

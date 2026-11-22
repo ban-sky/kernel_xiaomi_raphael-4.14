@@ -10,8 +10,8 @@ permissions:
 env:
   KNAME: Zundamon
   KVERNUM: "1.0"
-  KSTAGE: "rc5"
-  KV: "v1.0-rc5"
+  KSTAGE: "rc6"
+  KV: "v1.0-rc6"
   KLINE: "4.14.357"
   # The tree is backslashxx/KernelSU v3.3.1 (KSU_VERSION 32680,
   # KSU_APP_PROFILE_VER 4, package me.weishu.kernelsu). Its own build 32680 is
