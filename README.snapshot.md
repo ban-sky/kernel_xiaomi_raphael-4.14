@@ -28,6 +28,14 @@ Redmi K20 Pro / Mi 9T Pro（代号 **raphael**，SM8150）的 4.14 第三方内�
    - `drivers/gpu/drm/msm/sde/sde_connector.c`：`if (!display || !display->panel) return -ENODEV;`；`bl_max_level <= 1 || bl_range <= 0` 时直接用 `brightness`，否则 `bl_min + DIV_ROUND_CLOSEST((brightness - 1) * bl_range, bl_max_level - 1)`。
 7. **ESD IRQ 不平衡 + 裸改 istate**（中)
    - `drivers/gpu/drm/msm/dsi-staging/dsi_panel.c`：`irq_to_desc()` 结果判空；disable 前检查 `irqd_irq_disabled()`，避免重复 `disable_irq_nosync()` 把计数压到 0 以下导致 IRQ 永久关闭。
+8. **seamless 模式下 ESD 保护失效**（中）
+   - `drivers/gpu/drm/msm/dsi-staging/dsi_drm.c`：`dsi_bridge_disable()` 对 seamless/VRR/dyn-clk 模式提前返回，和 enable 路径对称；否则 enable 跳过、disable 照样关 ESD IRQ。
+
+## 版本与产物
+
+- 版本串：`CONFIG_LOCALVERSION="-Zundamon-1.0-rc1"` 且去掉了 `Makefile` 里的 `EXTRAVERSION = -openela`，`uname -r` 为 **`4.14.357-Zundamon-1.0-rc1`**。
+- 刷机包：`Zundamon-4.14.357-1.0-rc1.zip`（AnyKernel3，只替换 boot 内 kernel，不含 dtbo.img），artifact 名 `Zundamon-4.14.357-1.0-rc1`，同目录有 `.sha256`。
+- 命名规则 `Zundamon-<内核版本>-<版本号>[-rcN]`，由 workflow 顶部 `KNAME/KVERNUM/KSTAGE` 控制。
 
 ## CI 构建链（这段是踩坑记录）
 
@@ -62,3 +70,4 @@ CI 只证明能编过；NFC 大帧/`reboot edl`/QC3 18W 上报/背光这些修�
 - 4.14 与澎湃 OS 4 移植包同代，但仍需与 ROM 的 vendor 匹配；刷前备份 `boot`/`dtbo`。
 - 确认版本：`magiskboot unpack boot.img` 或 `unpack_bootimg --boot_img boot.img`。
 - 出问题先看 `console-ramoops`（ramoops 区域 0xa1600000，8MB）。
+- 包是 AnyKernel3：TWRP/OrangeFox 直接刷 zip，只替换 boot 里的 kernel。**不含 `dtbo.img`**（boot 的 dtb 要和 ROM 的 dtbo 同代，覆盖 ROM dtbo 风险大），dtbo 镜像单独放在 `raphael-4.14-image` artifact。打包后 CI 会 `unzip -l` 校验 `Image`/`anykernel.sh`/`tools/ak3-core.sh`，缺一个即失败。
