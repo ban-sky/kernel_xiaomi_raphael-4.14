@@ -57,7 +57,7 @@ jobs:
             raphael_defconfig 2>&1 | tee out.configure.log \
             || { echo "CONFIGURE FAILED"; exit 1; }
           if [ "${{ matrix.variant }}" = "docker" ]; then
-            scripts/kconfig/merge_config.sh -m -O out arch/arm64/configs/raphael_docker.config
+            scripts/kconfig/merge_config.sh -m -O out out/.config arch/arm64/configs/raphael_docker.config
             make -j"$(nproc)" O=out ARCH=arm64 \
               CROSS_COMPILE=aarch64-linux-gnu- \
               CROSS_COMPILE_COMPAT=arm-linux-gnueabi- \
