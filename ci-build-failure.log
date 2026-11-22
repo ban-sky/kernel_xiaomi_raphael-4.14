@@ -1,0 +1,10 @@
+run: 45012758623  commit: cfab397b1b175ff7c4a04959cf842a2fcacc0b45
+=== release.log ===
+no matches found for `to`
+=== dist ===
+total 68076
+-rw-r--r-- 1 runner runner 12138194 Nov 22 10:41 KernelSU-v3.3.1_32680.apk
+-rw-r--r-- 1 runner runner 28812562 Nov 22 10:41 Zundamon-4.14.357-v1.0-rc4-docker.zip
+-rw-r--r-- 1 runner runner      104 Nov 22 10:41 Zundamon-4.14.357-v1.0-rc4-docker.zip.sha256
+-rw-r--r-- 1 runner runner 28744470 Nov 22 10:41 Zundamon-4.14.357-v1.0-rc4.zip
+-rw-r--r-- 1 runner runner       97 Nov 22 10:41 Zundamon-4.14.357-v1.0-rc4.zip.sha256
