@@ -10,8 +10,8 @@ permissions:
 env:
   KNAME: Zundamon
   KVERNUM: "1.0"
-  KSTAGE: "rc4"
-  KV: "v1.0-rc4"
+  KSTAGE: "rc5"
+  KV: "v1.0-rc5"
   KLINE: "4.14.357"
   # The tree is backslashxx/KernelSU v3.3.1 (KSU_VERSION 32680,
   # KSU_APP_PROFILE_VER 4, package me.weishu.kernelsu). Its own build 32680 is
@@ -284,7 +284,7 @@ jobs:
           - Do not use KernelSU-Next 3.x managers: 3.1.0 uses app-profile ABI v2 and 3.2.0/3.4.x require kernel 33110/33188, so superuser profile edits fail with failed to update app profile.
           - Both zips' anykernel.sh copies the manager to /sdcard/Download/Zundamon/KernelSU.apk; install it after boot.
 
-          Changes in v1.0-rc4: switched the bundled manager to backslashxx/KernelSU v3.3.1 build 32680 (exact kernel match) and updated the kernel certificate whitelist to it, so adding a superuser no longer fails with the app profile error.
+          Changes in v1.0-rc5: DC dimming now actually drives the SDE dim layer when the ROM switches it on (DISPPARAM_DC_ON/OFF previously only latched a flag nobody consumed, so toggling it did nothing), and the NFC driver now logs ven/firm/irq/clock state at power-on so a silent NFC can be diagnosed from dmesg. Includes v1.0-rc4 changes: bundled manager switched to backslashxx/KernelSU v3.3.1 build 32680 (exact kernel match) with the matching certificate whitelist.
 
           Backup boot/dtbo before flashing." \
             dist/*.zip dist/*.sha256 dist/*.apk 2>&1 | tee release.log
