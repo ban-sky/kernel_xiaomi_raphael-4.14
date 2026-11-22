@@ -284,7 +284,7 @@ jobs:
           - Do not use KernelSU-Next 3.x managers: 3.1.0 uses app-profile ABI v2 and 3.2.0/3.4.x require kernel 33110/33188, so superuser profile edits fail with failed to update app profile.
           - Both zips' anykernel.sh copies the manager to /sdcard/Download/Zundamon/KernelSU.apk; install it after boot.
 
-          Changes in v1.0-rc4: switched the bundled manager to backslashxx/KernelSU v3.3.1 build 32680 (exact kernel match) and updated the kernel certificate whitelist to it, so adding a superuser no longer fails with "failed to update app profile".
+          Changes in v1.0-rc4: switched the bundled manager to backslashxx/KernelSU v3.3.1 build 32680 (exact kernel match) and updated the kernel certificate whitelist to it, so adding a superuser no longer fails with the app profile error.
 
           Backup boot/dtbo before flashing." \
             dist/*.zip dist/*.sha256 dist/*.apk 2>&1 | tee release.log
