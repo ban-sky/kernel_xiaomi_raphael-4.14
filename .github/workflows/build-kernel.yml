@@ -221,6 +221,11 @@ jobs:
     permissions:
       contents: write
     steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
       - name: Download flashable zip
         uses: actions/download-artifact@v4
         with:
@@ -238,9 +243,10 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TAG: v${{ env.KVERNUM }}-${{ env.KSTAGE }}-4.14
         run: |
-          set -e
-          gh release delete "$TAG" --yes --cleanup-tag || true
+          set -o pipefail
+          gh release delete "$TAG" --repo "$GITHUB_REPOSITORY" --yes --cleanup-tag || true
           gh release create "$TAG" \
+            --repo "$GITHUB_REPOSITORY" \
             --title "Zundamon 4.14.357 ${{ env.KVERNUM }}-${{ env.KSTAGE }} (raphael / K20 Pro)" \
             --prerelease \
             --notes "Zundamon kernel for Redmi K20 Pro (raphael), 4.14.357, ${{ env.KSTAGE }}.
@@ -253,4 +259,17 @@ jobs:
           - The flashable zip also copies the manager to /sdcard/Download/Zundamon/; install it after boot.
 
           Backup boot/dtbo before flashing." \
-            dist/*.zip dist/*.sha256 dist/*.apk
+            dist/*.zip dist/*.sha256 dist/*.apk 2>&1 | tee release.log
+
+      - name: Publish release failure log to branch
+        if: failure()
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          { echo "run: $GITHUB_RUN_ID  commit: $GITHUB_SHA"; echo "=== release.log ==="; cat release.log 2>/dev/null; echo "=== dist ==="; ls -l dist 2>/dev/null; } > ci-build-failure.log
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git checkout -B ci-logs
+          git add -f ci-build-failure.log
+          git commit -m "ci: release failure log (run $GITHUB_RUN_ID)" || true
+          git push --force origin ci-logs || true
