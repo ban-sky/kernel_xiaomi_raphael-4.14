@@ -30,12 +30,25 @@ Redmi K20 Pro / Mi 9T Pro（代号 **raphael**，SM8150）的 4.14 第三方内�
    - `drivers/gpu/drm/msm/dsi-staging/dsi_panel.c`：`irq_to_desc()` 结果判空；disable 前检查 `irqd_irq_disabled()`，避免重复 `disable_irq_nosync()` 把计数压到 0 以下导致 IRQ 永久关闭。
 8. **seamless 模式下 ESD 保护失效**（中）
    - `drivers/gpu/drm/msm/dsi-staging/dsi_drm.c`：`dsi_bridge_disable()` 对 seamless/VRR/dyn-clk 模式提前返回，和 enable 路径对称；否则 enable 跳过、disable 照样关 ESD IRQ。
+9. **DC 调光把低亮度锁死**（rc2，待真机确认）
+   - `drivers/gpu/drm/msm/dsi-staging/dsi_panel.c`：DC 调光（`DISPPARAM_DC_ON` / `DISPPARAM_DC_LAYER_ON`）打开后，低于 `dc_threshold`（raphael 是 610/2047）的背光请求会被 **整条丢弃**（`skip set backlight bacase dc enable`），或**钉死在 dc_threshold**。Xiaomi 原本靠显示处理器在底层压暗画面；部分第三方 ROM（如移植的澎湃 OS 3）只打开了 DC 图层却没做画面压暗，于是亮度条在低段完全没反应、屏幕停在 ~30%。
+   - 现在改成：DC 地板默认关闭，背光始终按请求值下发（DC 图层命令 `DIMMINGON/OFF` 仍照发）。需要恢复 Xiaomi 老行为时，给面板节点加 `qcom,mdss-dsi-panel-dc-floor-enable;` 即可。
 
 ## 版本与产物
 
-- 版本串：`CONFIG_LOCALVERSION="-Zundamon-1.0-rc1"` 且去掉了 `Makefile` 里的 `EXTRAVERSION = -openela`，`uname -r` 为 **`4.14.357-Zundamon-1.0-rc1`**。
-- 刷机包：`Zundamon-4.14.357-1.0-rc1.zip`（AnyKernel3，只替换 boot 内 kernel，不含 dtbo.img），artifact 名 `Zundamon-4.14.357-1.0-rc1`，同目录有 `.sha256`。
+- 版本串：`CONFIG_LOCALVERSION="-Zundamon-1.0-rc2"` 且去掉了 `Makefile` 里的 `EXTRAVERSION = -openela`，`uname -r` 为 **`4.14.357-Zundamon-1.0-rc2`**。
+- 刷机包：`Zundamon-4.14.357-1.0-rc2.zip`（AnyKernel3，只替换 boot 内 kernel，不含 dtbo.img），artifact 名 `Zundamon-4.14.357-1.0-rc2`，同目录有 `.sha256`。
 - 命名规则 `Zundamon-<内核版本>-<版本号>[-rcN]`，由 workflow 顶部 `KNAME/KVERNUM/KSTAGE` 控制。
+
+## Releases 与 root 管理器
+
+- `main` 分支构建成功后，workflow 里的 `release` job 会用 Actions 自带的 `GITHUB_TOKEN` 自动创建/更新 **prerelease** `v1.0-rc2-4.14`，资产包括：
+  - `Zundamon-4.14.357-1.0-rc2.zip` + `.sha256`；
+  - `KernelSU-Next-v3.4.2.apk`（首选）；
+  - `KernelSU-Next-v3.2.0.apk`（回退，若 3.4.2 提示内核版本不支持）。
+- 内核里的 KernelSU 是 **KernelSU-Next**（`drivers/staging/kernelsu/Makefile:11` `KSU_VERSION=32680`，`KSU_EXPECTED_HASH=c371061b…`），所以管理器必须用 KSU-Next 的 APK，不能装原版 KernelSU。
+- 刷机包内也放了一份 `KernelSU-Next.apk`，`anykernel.sh` 刷完会把管理器拷到 `/sdcard/Download/Zundamon/KernelSU-Next.apk`。恢复模式里没法静默执行 `pm install`，所以**重启后需要手动点一下这个 APK 安装**。
+- 管理器版本比内核新是正常的（管理器向下兼容旧内核）；若提示“内核版本过低”，装 Release 里的 v3.2.0 那个。
 
 ## CI 构建链（这段是踩坑记录）
 
