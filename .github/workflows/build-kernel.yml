@@ -7,7 +7,7 @@ on:
 jobs:
   build:
     runs-on: ubuntu-22.04
-    timeout-minutes: 150
+    timeout-minutes: 180
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -19,35 +19,32 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends \
             bc bison flex libssl-dev libelf-dev device-tree-compiler \
-            clang lld llvm gcc-aarch64-linux-gnu make
+            gcc-aarch64-linux-gnu make
 
       - name: Show toolchain versions
-        run: |
-          clang --version | head -1
-          ld.lld --version | head -1
-          aarch64-linux-gnu-gcc --version | head -1
+        run: aarch64-linux-gnu-gcc --version | head -1
 
       - name: Configure (raphael_defconfig)
         run: |
+          set -o pipefail
+          mkdir -p out
           make -j"$(nproc)" O=out ARCH=arm64 \
-            CC=clang LD=ld.lld AR=llvm-ar NM=llvm-nm \
-            OBJCOPY=llvm-objcopy OBJDUMP=llvm-objdump STRIP=llvm-strip \
             CROSS_COMPILE=aarch64-linux-gnu- \
-            CLANG_TRIPLE=aarch64-linux-gnu- \
             DTC_EXT=dtc \
-            raphael_defconfig
+            raphael_defconfig 2>&1 | tee out.configure.log \
+            || { echo "CONFIGURE FAILED"; exit 1; }
 
       - name: Build Image and dtbs
         run: |
+          set -o pipefail
           make -j"$(nproc)" O=out ARCH=arm64 \
-            CC=clang LD=ld.lld AR=llvm-ar NM=llvm-nm \
-            OBJCOPY=llvm-objcopy OBJDUMP=llvm-objdump STRIP=llvm-strip \
             CROSS_COMPILE=aarch64-linux-gnu- \
-            CLANG_TRIPLE=aarch64-linux-gnu- \
             DTC_EXT=dtc \
-            Image dtbs
+            Image dtbs 2>&1 | tee out.build.log \
+            || { echo "BUILD FAILED"; exit 1; }
 
       - name: Collect artifacts
+        if: always()
         run: |
           mkdir -p artifacts
           cp out/arch/arm64/boot/Image artifacts/ 2>/dev/null || true
@@ -55,9 +52,11 @@ jobs:
           cp out/arch/arm64/boot/dts/qcom/*.dtb artifacts/ 2>/dev/null || true
           cp out/arch/arm64/boot/dts/qcom/*.dtbo artifacts/ 2>/dev/null || true
           cp out/.config artifacts/config-raphael 2>/dev/null || true
+          cp out.build.log out.configure.log artifacts/ 2>/dev/null || true
           ls -lh artifacts
 
       - name: Upload artifacts
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: raphael-4.14-image
