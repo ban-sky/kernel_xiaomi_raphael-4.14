@@ -46,8 +46,9 @@ Redmi K20 Pro / Mi 9T Pro（代号 **raphael**，SM8150）的 4.14 第三方内�
   - `Zundamon-4.14.357-1.0-rc2.zip` + `.sha256`；
   - `KernelSU-Next-v3.1.0.apk`（首选，`MINIMAL_SUPPORTED_KERNEL=32310`）；
   - `KernelSU-Next-v3.0.1.apk`（更老的回退，`MINIMAL_SUPPORTED_KERNEL=22000`）。
-- 内核里的 KernelSU 是 **KernelSU-Next**（`drivers/staging/kernelsu/Makefile:11` `KSU_VERSION=32680`，`KSU_EXPECTED_HASH=c371061b…`），所以管理器必须用 KSU-Next 的 APK，不能装原版 KernelSU。
+- 内核里的 KernelSU 是 **KernelSU-Next**（`drivers/staging/kernelsu/Makefile:11` `KSU_VERSION=32680`），所以管理器必须用 KSU-Next 的 APK，不能装原版 KernelSU。
 - 管理器版本要**压着内核版本选**：每个 KSU-Next 管理器在 `Natives.kt` 里写死了 `MINIMAL_SUPPORTED_KERNEL`——v3.4.x 需要 33188、v3.2.0 需要 33110、v3.1.0 需要 32310、v3.0.x 需要 22000。本内核是 32680，所以 **3.2.0 及更新的管理器都会提示“内核版本不受支持”**，只能用 3.1.0（或更老）。这就是第一个 Release 里 3.4.2 装不上的原因。
+- 另一个坑是 **v2 签名白名单**：`manager/apk_sign.c:322` 用 `KSU_EXPECTED_SIZE/HASH` 校验管理器 APK 的签名证书。上游这棵树原先带的是 tiann/KernelSU 的默认值（`me.weishu.kernelsu`、827 字节证书、`c371061b…`），而官方 KSU-Next APK 的证书是 998 字节、`79e59011…`，所以任何官方 KSU-Next 管理器都会报“无法在内核找到v2签名”。现在已把常量改成 KSU-Next 的发布签名（`0x03e6` / `79e59011…` / 包名 `com.rifsxd.ksunext`）。
 - 刷机包内也放了一份 `KernelSU-Next.apk`（即 3.1.0），`anykernel.sh` 刷完会把管理器拷到 `/sdcard/Download/Zundamon/KernelSU-Next.apk`。恢复模式里没法静默执行 `pm install`，所以**重启后需要手动点一下这个 APK 安装**。
 
 ## CI 构建链（这段是踩坑记录）
