@@ -37,20 +37,28 @@ Redmi K20 Pro / Mi 9T Pro（代号 **raphael**，SM8150）的 4.14 第三方内�
    - `arch/arm64/boot/dts/qcom/xiaomi-sm8150-common.dtsi` 的 `qcom,mdss-dsi-bl-min-level` 从 `<2>` 提到 `<60>`（2047 的约 3%）。
    - `drivers/gpu/drm/msm/dsi-staging/dsi_panel.c` 的 `dsi_panel_set_backlight()` 对任何非零 `bl_temp` 钳制到 `bl_min_level`；`0` 仍是 `0`，关屏/AOD 不受影响。觉得还暗就继续调这个 60。
 
+11. **DC 调光开关没有实际效果**（rc5，待真机确认）
+   - 根因：ROM 的 DC 开关走 `disp_param` 的 `DISPPARAM_DC_ON/OFF`，原来只置 `panel->dc_enable`，而真正驱动 SDE dim layer 的是 `panel->dc_dimming_enabled`（由 `DISPPARAM_DC_LAYER_ON/OFF` 置位）。`dc_enable` 在 rc2 之后就没人消费，所以开关毫无反应。
+   - rc5 起 `DISPPARAM_DC_ON/OFF` 同时置/清 `dc_dimming_enabled`，DC 一开就按 `dc_panel_alpha.h` 的 LUT 叠加黑色 dim layer（亮度 < 610 时生效，610 及以上 alpha=0）。
+   - 也可以手动验证：`echo 1 > /sys/class/drm/card0-DSI-1/dc_dimming`，再切亮度看是否变暗；`cat` 同一个节点看状态。
+12. **NFC 无法识别时便于定位**（rc5，诊断）
+   - `drivers/nfc/nq-nci.c` 在 `NFC_SET_PWR` 上电成功后打一行：`nq-nci: powered on ven=.. firm=.. irq=.. clk_vote=.. chip=0x..`。
+   - 若 `ven=0` 说明 VEN 没拉起来（电源/GPIO 问题）；`irq=1` 长时间不变说明芯片没发中断（可能没上电/固件没跑）；`chip=0x0` 是本树把 `nfcc_hw_check` 关掉（原厂注释：避免阻塞 FW download）导致的，管理器/HAL 若依赖 `NFCC_GET_INFO` 需要这一项。
+
 ## 版本与产物
 
-- 版本串：`CONFIG_LOCALVERSION="-Zundamon-v1.0-rc4"`（`1.0` 前带 `v`）且去掉了 `Makefile` 里的 `EXTRAVERSION = -openela`，`uname -r` 为 **`4.14.357-Zundamon-v1.0-rc4`**。
+- 版本串：`CONFIG_LOCALVERSION="-Zundamon-v1.0-rc5"`（`1.0` 前带 `v`）且去掉了 `Makefile` 里的 `EXTRAVERSION = -openela`，`uname -r` 为 **`4.14.357-Zundamon-v1.0-rc5`**。
 - 每次 CI 出两种口味：
-  - `Zundamon-4.14.357-v1.0-rc4.zip`——标准版；
-  - `Zundamon-4.14.357-v1.0-rc4-docker.zip`——同内核 + Docker/容器支持；
+  - `Zundamon-4.14.357-v1.0-rc5.zip`——标准版；
+  - `Zundamon-4.14.357-v1.0-rc5-docker.zip`——同内核 + Docker/容器支持；
   - 都是 AnyKernel3，只替换 boot 内 kernel，不含 dtbo.img，同目录有 `.sha256`。
 - Docker 版是在 `raphael_defconfig` 上再叠 `arch/arm64/configs/raphael_docker.config`：UTS/IPC/PID/NET/USER 命名空间、cgroup pids/device、veth/macvlan/vxlan/bridge + iptables NAT、overlayfs、seccomp filter。标准版不启用这些（尤其 `USER_NS` 会扩大攻击面），两个包互不影响。
 - 命名规则 `Zundamon-<内核版本>-<版本号>[-docker]`，由 workflow 顶部 `KNAME/KV` 控制。
 
 ## Releases 与 root 管理器
 
-- `main` 分支构建成功后，workflow 的 `release` job 用 Actions 自带的 `GITHUB_TOKEN` 自动创建/更新 **prerelease** `v1.0-rc4-4.14`，资产包括：
-  - `Zundamon-4.14.357-v1.0-rc4.zip` / `Zundamon-4.14.357-v1.0-rc4-docker.zip` + `.sha256`；
+- `main` 分支构建成功后，workflow 的 `release` job 用 Actions 自带的 `GITHUB_TOKEN` 自动创建/更新 **prerelease** `v1.0-rc5-4.14`，资产包括：
+  - `Zundamon-4.14.357-v1.0-rc5.zip` / `Zundamon-4.14.357-v1.0-rc5-docker.zip` + `.sha256`；
   - `KernelSU-v3.3.1_32680.apk`——唯一匹配的管理器。
 - 这棵树自带的是 **backslashxx/KernelSU v3.3.1**（KernelSU-Next 的 fork）：`drivers/staging/kernelsu/Makefile:11` `KSU_VERSION=32680`，`include/uapi/app_profile.h:4` `KSU_APP_PROFILE_VER 4`，包名 `me.weishu.kernelsu`。
 - 所以管理器必须用 backslashxx 的 **build 32680** APK：`Natives.kt:27` `MINIMAL_SUPPORTED_KERNEL=32513`，app-profile ABI 为 v4（`uapi/app_profile.h:6`），包名一致。
