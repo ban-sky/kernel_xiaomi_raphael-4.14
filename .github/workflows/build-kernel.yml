@@ -11,10 +11,12 @@ env:
   KNAME: Zundamon
   KVERNUM: "1.0"
   KSTAGE: "rc2"
-  # KernelSU-Next manager shipped beside the kernel; the kernel tree tracks
-  # KSU_VERSION 32680 (KSU-Next), which needs a KSU-Next manager APK.
-  KSU_MANAGER_URL: "https://github.com/KernelSU-Next/KernelSU-Next/releases/download/v3.4.2/KernelSU_Next_v3.4.2_33355-release.apk"
-  KSU_MANAGER_FALLBACK_URL: "https://github.com/KernelSU-Next/KernelSU-Next/releases/download/v3.2.0/KernelSU_Next_v3.2.0_33129-release.apk"
+  # KernelSU-Next manager shipped beside the kernel. The kernel tree tracks
+  # KSU_VERSION 32680, and every manager declares MINIMAL_SUPPORTED_KERNEL:
+  #   v3.4.x -> 33188, v3.2.0 -> 33110, v3.1.0 -> 32310, v3.0.x -> 22000
+  # 32680 < 33110, so only v3.1.0 / v3.0.x managers accept this kernel.
+  KSU_MANAGER_URL: "https://github.com/KernelSU-Next/KernelSU-Next/releases/download/v3.1.0/KernelSU_Next_v3.1.0_33024-release.apk"
+  KSU_MANAGER_FALLBACK_URL: "https://github.com/KernelSU-Next/KernelSU-Next/releases/download/v3.0.1/KernelSU_Next_v3.0.1_32967-release.apk"
 
 jobs:
   build:
@@ -234,8 +236,8 @@ jobs:
 
       - name: Fetch KernelSU-Next managers
         run: |
-          curl -fsSL -o "dist/KernelSU-Next-v3.4.2.apk" "$KSU_MANAGER_URL" || true
-          curl -fsSL -o "dist/KernelSU-Next-v3.2.0.apk" "$KSU_MANAGER_FALLBACK_URL" || true
+          curl -fsSL -o "dist/KernelSU-Next-v3.1.0.apk" "$KSU_MANAGER_URL" || true
+          curl -fsSL -o "dist/KernelSU-Next-v3.0.1.apk" "$KSU_MANAGER_FALLBACK_URL" || true
           ls -lh dist
 
       - name: Publish GitHub release
@@ -254,8 +256,9 @@ jobs:
           uname: 4.14.357-Zundamon-${{ env.KVERNUM }}-${{ env.KSTAGE }}
 
           - Zundamon-4.14.357-${{ env.KVERNUM }}-${{ env.KSTAGE }}.zip: AnyKernel3 flashable zip (Image only, keeps your ROM dtbo).
-          - KernelSU-Next-v3.4.2.apk: manager matching the built-in KernelSU (KSU-Next). Try this first.
-          - KernelSU-Next-v3.2.0.apk: fallback manager if 3.4.2 reports an unsupported kernel.
+          - KernelSU-Next-v3.1.0.apk: manager matching this kernel (MINIMAL_SUPPORTED_KERNEL 32310 < 32680). Use this one.
+          - KernelSU-Next-v3.0.1.apk: older fallback (MINIMAL_SUPPORTED_KERNEL 22000).
+          - Do not use 3.2.0+ managers: they require kernel >= 33110 and will report an unsupported kernel.
           - The flashable zip also copies the manager to /sdcard/Download/Zundamon/; install it after boot.
 
           Backup boot/dtbo before flashing." \

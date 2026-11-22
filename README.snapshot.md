@@ -44,11 +44,11 @@ Redmi K20 Pro / Mi 9T Pro（代号 **raphael**，SM8150）的 4.14 第三方内�
 
 - `main` 分支构建成功后，workflow 里的 `release` job 会用 Actions 自带的 `GITHUB_TOKEN` 自动创建/更新 **prerelease** `v1.0-rc2-4.14`，资产包括：
   - `Zundamon-4.14.357-1.0-rc2.zip` + `.sha256`；
-  - `KernelSU-Next-v3.4.2.apk`（首选）；
-  - `KernelSU-Next-v3.2.0.apk`（回退，若 3.4.2 提示内核版本不支持）。
+  - `KernelSU-Next-v3.1.0.apk`（首选，`MINIMAL_SUPPORTED_KERNEL=32310`）；
+  - `KernelSU-Next-v3.0.1.apk`（更老的回退，`MINIMAL_SUPPORTED_KERNEL=22000`）。
 - 内核里的 KernelSU 是 **KernelSU-Next**（`drivers/staging/kernelsu/Makefile:11` `KSU_VERSION=32680`，`KSU_EXPECTED_HASH=c371061b…`），所以管理器必须用 KSU-Next 的 APK，不能装原版 KernelSU。
-- 刷机包内也放了一份 `KernelSU-Next.apk`，`anykernel.sh` 刷完会把管理器拷到 `/sdcard/Download/Zundamon/KernelSU-Next.apk`。恢复模式里没法静默执行 `pm install`，所以**重启后需要手动点一下这个 APK 安装**。
-- 管理器版本比内核新是正常的（管理器向下兼容旧内核）；若提示“内核版本过低”，装 Release 里的 v3.2.0 那个。
+- 管理器版本要**压着内核版本选**：每个 KSU-Next 管理器在 `Natives.kt` 里写死了 `MINIMAL_SUPPORTED_KERNEL`——v3.4.x 需要 33188、v3.2.0 需要 33110、v3.1.0 需要 32310、v3.0.x 需要 22000。本内核是 32680，所以 **3.2.0 及更新的管理器都会提示“内核版本不受支持”**，只能用 3.1.0（或更老）。这就是第一个 Release 里 3.4.2 装不上的原因。
+- 刷机包内也放了一份 `KernelSU-Next.apk`（即 3.1.0），`anykernel.sh` 刷完会把管理器拷到 `/sdcard/Download/Zundamon/KernelSU-Next.apk`。恢复模式里没法静默执行 `pm install`，所以**重启后需要手动点一下这个 APK 安装**。
 
 ## CI 构建链（这段是踩坑记录）
 
